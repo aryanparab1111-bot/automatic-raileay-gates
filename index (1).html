@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Automatic Railway Gate Simulator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap" id="root">
+<header>
+  <div>
+    <h1>AUTOMATIC RAILWAY GATE SIMULATOR</h1>
+    <p class="sub">Digital Logic Gates-Based Railway Safety System</p>
+  </div>
+  <div class="btns">
+    <span class="badge" id="badge"><span class="led g"></span><span id="badgeTxt">SYSTEM ONLINE</span></span>
+    <button class="pri" id="bStart" aria-label="Start simulation">Start Simulation</button>
+    <button id="bPause" aria-label="Pause or resume simulation">Pause</button>
+    <button class="dng" id="bReset" aria-label="Reset simulation">Reset</button>
+  </div>
+</header>
+<div class="alert" id="alert" role="alert"></div>
+
+<section class="card" aria-label="Railway crossing">
+<svg id="scene" viewBox="0 0 1000 340" role="img" aria-label="Animated railway level crossing">
+  <rect width="1000" height="340" fill="#0e1b36"/>
+  <rect x="50" y="0" width="370" height="340" fill="#ffb938" opacity=".06"/>
+  <rect x="420" y="0" width="160" height="340" fill="#2b3145"/>
+  <rect x="420" y="0" width="160" height="340" fill="#ff4d5e" opacity=".07"/>
+  <g stroke="#e8eefc" stroke-width="3" stroke-dasharray="22 16" opacity=".7"><line x1="500" y1="0" x2="500" y2="196"/><line x1="500" y1="264" x2="500" y2="340"/></g>
+  <line x1="50" y1="0" x2="50" y2="340" stroke="#4da3ff" stroke-dasharray="6 6" opacity=".6"/>
+  <text x="56" y="18" fill="#4da3ff" font-size="13">Approach sensor</text>
+  <text x="426" y="18" fill="#ff8a96" font-size="13">Crossing zone</text>
+  <!-- Track: ballast, sleepers, rails -->
+  <rect x="0" y="198" width="1000" height="64" fill="#2a2620"/>
+  <g id="sleepers" stroke="#6b5a42" stroke-width="7"></g>
+  <line x1="0" y1="212" x2="1000" y2="212" stroke="#b9c2d6" stroke-width="4"/>
+  <line x1="0" y1="248" x2="1000" y2="248" stroke="#b9c2d6" stroke-width="4"/>
+  <rect x="420" y="198" width="160" height="64" fill="#3a3f52" opacity=".85"/>
+  <line x1="420" y1="212" x2="580" y2="212" stroke="#b9c2d6" stroke-width="4"/><line x1="420" y1="248" x2="580" y2="248" stroke="#b9c2d6" stroke-width="4"/>
+  <!-- Train: tail at x=0, locomotive at front (x=300) -->
+  <g id="train">
+    <g fill="#3b6fd0" stroke="#0a1226" stroke-width="2"><rect x="0" y="212" width="70" height="36" rx="5"/><rect x="76" y="212" width="70" height="36" rx="5"/><rect x="152" y="212" width="70" height="36" rx="5"/></g>
+    <g fill="#9fc3ff" opacity=".7"><rect x="8" y="222" width="54" height="16" rx="3"/><rect x="84" y="222" width="54" height="16" rx="3"/><rect x="160" y="222" width="54" height="16" rx="3"/></g>
+    <rect x="228" y="210" width="72" height="40" rx="9" fill="#e5484d" stroke="#0a1226" stroke-width="2"/>
+    <rect x="270" y="219" width="22" height="22" rx="4" fill="#ffe9a8"/><circle cx="299" cy="230" r="4" fill="#fff4b0"/>
+  </g>
+  <!-- Left barrier (pivot 420,186) and right barrier (pivot 580,276) -->
+  <g id="barL"><rect x="0" y="-5" width="80" height="10" fill="#fff" stroke="#c0152c"/><g fill="#d6182f"><rect x="14" y="-5" width="14" height="10"/><rect x="42" y="-5" width="14" height="10"/><rect x="70" y="-5" width="10" height="10"/></g></g>
+  <g id="barR"><rect x="-80" y="-5" width="80" height="10" fill="#fff" stroke="#c0152c"/><g fill="#d6182f"><rect x="-28" y="-5" width="14" height="10"/><rect x="-56" y="-5" width="14" height="10"/><rect x="-80" y="-5" width="10" height="10"/></g></g>
+  <circle cx="420" cy="186" r="8" fill="#555c75"/><circle cx="580" cy="276" r="8" fill="#555c75"/>
+  <!-- Signal poles with blinking red lamps -->
+  <g id="sig">
+    <rect x="394" y="120" width="8" height="66" fill="#6b748f"/><rect x="378" y="108" width="40" height="22" rx="6" fill="#1b2340" stroke="#6b748f"/>
+    <circle class="la" cx="389" cy="119" r="7" fill="#ff4d5e" id="lampL1"/><circle class="lb" cx="407" cy="119" r="7" fill="#ff4d5e" id="lampL2"/>
+    <rect x="598" y="276" width="8" height="66" fill="#6b748f"/><rect x="582" y="288" width="40" height="22" rx="6" fill="#1b2340" stroke="#6b748f"/>
+    <circle class="la" cx="593" cy="299" r="7" fill="#ff4d5e" id="lampR1"/><circle class="lb" cx="611" cy="299" r="7" fill="#ff4d5e" id="lampR2"/>
+  </g>
+  <text id="sceneTag" x="990" y="332" text-anchor="end" fill="#8fa0c8" font-size="12">Simulated train position</text>
+</svg>
+<div class="strip" aria-hidden="true"><i id="mark"></i></div>
+<div class="legend"><span>Approach &rarr; sensor</span><span>Crossing zone</span><span>Cleared</span></div>
+</section>
+
+<div class="grid">
+<section class="card span2" aria-label="Logic gate panel">
+  <h2>Digital Logic Gate Control Panel</h2>
+  <div class="gates" id="gates"></div>
+  <p class="note">A (Train Detected) follows the simulated sensor; click it to force detection for testing. B (System Active) mirrors the System Active toggle. All values are simulated.</p>
+</section>
+
+<section class="card" aria-label="Sensor and system status">
+  <h2>Sensor &amp; System Status <span class="sim">(all values simulated)</span></h2>
+  <div class="cards" id="cards"></div>
+</section>
+
+<section class="card" aria-label="Simulation controls">
+  <h2>Simulation Controls</h2>
+  <div class="ctl">
+    <div class="row"><label for="spd">Train speed</label>
+      <select id="spd"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option></select></div>
+    <label><input type="checkbox" id="tSys" checked> System Active</label>
+    <label><input type="checkbox" id="tMan"> Manual Train Detection (test)</label>
+    <label><input type="checkbox" id="tStep"> Step-by-step mode</label>
+    <div class="row"><button id="bNext" disabled>Next Step</button><span class="note" id="stepNote">Step mode off.</span></div>
+  </div>
+</section>
+
+<section class="card" aria-label="Event log">
+  <h2>Event Log</h2>
+  <ul id="log" aria-live="polite"></ul>
+  <p><button id="bClear">Clear Log</button></p>
+</section>
+
+<section class="card" aria-label="Truth tables">
+  <h2>Logic Truth Table</h2>
+  <div class="tts">
+    <div><b>AND</b><table id="tAND"><tr><th>A</th><th>B</th><th>Q</th></tr></table></div>
+    <div><b>OR</b><table id="tOR"><tr><th>A</th><th>B</th><th>Q</th></tr></table></div>
+    <div><b>NOT</b><table id="tNOT"><tr><th>A</th><th>Q</th></tr></table></div>
+  </div>
+</section>
+
+<section class="card learn span2" aria-label="Education">
+  <h2>How Digital Logic Gates Work</h2>
+  <p><b>AND:</b> output is 1 only when both inputs are 1. <b>OR:</b> output is 1 when at least one input is 1. <b>NOT:</b> output is the inverse of its input.</p>
+  <p>In this crossing, <b>Warning = Train Detected AND System Active</b>: lights start only when a train is sensed and the system is on. <b>NOT Train Detected</b> shows the track is clear, which allows the barrier to rise after a short delay. <b>Train Detected OR System Active</b> shows whether any input is present at all.</p>
+  <p>Sequence: detect &rarr; warning lights &rarr; barrier lowers &rarr; train passes &rarr; train clears &rarr; warning continues briefly &rarr; barrier rises &rarr; lights off. If the train reaches the stop line before the barrier is fully down, it waits.</p>
+  <p class="note">Educational simulation only. These simplified gates are not a certified railway safety system.</p>
+</section>
+</div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
